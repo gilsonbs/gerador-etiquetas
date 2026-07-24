@@ -901,7 +901,7 @@ $('model-options').addEventListener('click', e => {
   state.model = btn.dataset.model;
   qa('.model-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  if (state.model === '5') {
+  if (state.model === '6') {
     state.useLogo = false;
     qa('.toggle-btn').forEach(b => b.classList.remove('selected'));
     document.querySelector('.toggle-btn[data-logo="false"]')?.classList.add('selected');
@@ -913,7 +913,7 @@ $('model-options').addEventListener('click', e => {
 });
 
 $('logo-options').addEventListener('click', e => {
-  if (state.model === '5') return;
+  if (state.model === '6') return;
   const btn = e.target.closest('.toggle-btn');
   if (!btn) return;
   state.useLogo = btn.dataset.logo === 'true';
