@@ -1019,6 +1019,17 @@ $('btn-back-to-form').addEventListener('click', () => showScreen('form'));
 /* ==================================================================
    TELA 3 — PREVIEW
    ================================================================== */
+function priceTag(price, style, color) {
+  const m = (price || '').match(/^(R\$|[$€£¥])\s*/);
+  if (!m) return `<p style="${style}color:${color};">${esc(price)}</p>`;
+  const sym = esc(m[1]);
+  const num = esc(price.slice(m[0].length));
+  return `<p style="${style}color:${color};display:flex;align-items:flex-start;` +
+    `justify-content:center;white-space:nowrap;gap:0.04em;">` +
+    `<span style="font-size:0.4em;padding-top:0.12em;">${sym}</span>` +
+    `<span>${num}</span></p>`;
+}
+
 async function renderPreview() {
   const cfg = MODELS[state.model];
   const el = $('preview-a4');
@@ -1066,7 +1077,7 @@ async function renderPreview() {
           <div style="display:flex;flex-direction:column;align-items:center;
             justify-content:center;flex:1;gap:0;padding:2px;">
             <p style="${cfg.descStyle}color:${tc};">${esc(data.desc)}</p>
-            <p style="${cfg.priceStyle}color:${tc};">${esc(data.price)}</p>
+            ${priceTag(data.price, cfg.priceStyle, tc)}
           </div>`;
       }
     }
