@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Etiquetas</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ================================================================
+       TOKENS
+       ================================================================ */
+    :root {
+      --bg:         #EDE8DE;
+      --surface:    #F6F2E9;
+      --border:     #CEC5AE;
+      --text:       #252118;
+      --text-soft:  #5E5848;
+      --field-bg:   #fff;
+      --tool-bg:    #E8EDD8;
+      --tool-color: #3D4A22;
+      --tool-bdr:   #C0C9A0;
+
+      --ember:      #B5782A;
+      --ember-deep: #8E5C1C;
+      --olive:      #57603A;
+      --olive-deep: #404928;
+      --header-bg:  #1C2038;
+      --header-bdr: rgba(255,255,255,0.09);
+
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-ui:      'Inter', system-ui, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #1A1812;
+        --surface:   #232019;
+        --border:    #383325;
+        --text:      #EDE7D4;
+        --text-soft: #998E78;
+        --field-bg:  #1A1812;
+        --tool-bg:   #283020;
+        --tool-color:#A4B480;
+        --tool-bdr:  #3C4530;
+      }
+    }
+    :root[data-theme="light"] {
+      --bg:        #EDE8DE;
+      --surface:   #F6F2E9;
+      --border:    #CEC5AE;
+      --text:      #252118;
+      --text-soft: #5E5848;
+      --field-bg:  #fff;
+      --tool-bg:   #E8EDD8;
+      --tool-color:#3D4A22;
+      --tool-bdr:  #C0C9A0;
+    }
+    :root[data-theme="dark"] {
+      --bg:        #1A1812;
+      --surface:   #232019;
+      --border:    #383325;
+      --text:      #EDE7D4;
+      --text-soft: #998E78;
+      --field-bg:  #1A1812;
+      --tool-bg:   #283020;
+      --tool-color:#A4B480;
+      --tool-bdr:  #3C4530;
+    }
+
+    /* ================================================================
+       BASE
+       ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ================================================================
+       HEADER
+       ================================================================ */
+    .site-header {
+      background: var(--header-bg);
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--header-bdr);
+    }
+    .site-logo {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 600;
+      color: #F0EBE0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: rgba(181,120,42,0.18);
+      border-radius: 6px;
+      color: #D4943A;
+    }
+    .theme-toggle {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px;
+      color: #A8A090;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 5px 13px;
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .theme-toggle:hover { border-color: rgba(255,255,255,0.32); color: #F0EBE0; }
+
+    /* ================================================================
+       LAYOUT
+       ================================================================ */
+    .page-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 44px 24px 88px;
+    }
+
+    .page-header { text-align: center; margin-bottom: 32px; }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 7px;
+      text-wrap: balance;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-soft);
+      line-height: 1.55;
+    }
+
+    /* ================================================================
+       STEPPER
+       ================================================================ */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-soft);
+      white-space: nowrap;
+    }
+    .step-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step.active .step-dot { background: var(--ember); }
+    .step.active { color: var(--text); }
+    .step.done .step-dot { background: var(--olive); }
+    .step-line {
+      flex: 0 0 40px;
+      height: 1px;
+      background: var(--border);
+      margin: 0 10px;
+    }
+
+    /* ================================================================
+       CARD
+       ================================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 24px 28px;
+      margin-bottom: 14px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--ember);
+      margin-bottom: 16px;
+    }
+
+    /* ================================================================
+       MODEL GRID
+       ================================================================ */
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+      gap: 10px;
+    }
+    .model-btn {
+      background: var(--field-bg);
+      border: 2px solid var(--border);
+      border-radius: 2px;
+      padding: 16px 12px 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color .14s, box-shadow .14s;
+      font-family: var(--font-ui);
+    }
+    .model-btn:hover { border-color: var(--ember); }
+    .model-btn.selected { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember); }
+    .model-btn-thumb { display: block; margin: 0 auto 10px; }
+    .model-btn-name { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 3px; }
+    .model-btn-info { font-size: 11px; color: var(--text-soft); display: block; }
+
+    /* ================================================================
+       TOGGLE
+       ================================================================ */
+    .toggle-group { display: flex; gap: 10px; }
+    .toggle-btn {
+      flex: 0 0 auto;
+      min-width: 90px;
+      padding: 10px 20px;
+      background: var(--field-bg);
+      border: 2px solid var(--border);
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      transition: border-color .14s, box-shadow .14s;
+    }
+    .toggle-btn:hover { border-color: var(--ember); }
+    .toggle-btn.selected { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember); }
+    .toggle-note { font-size: 12px; color: var(--text-soft); margin-top: 10px; }
+
+    /* ================================================================
+       BUTTONS
+       ================================================================ */
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 24px;
+      border: none;
+      border-radius: 2px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .14s, opacity .14s, border-color .14s, color .14s;
+      letter-spacing: .01em;
+    }
+    .btn:disabled { opacity: .38; cursor: not-allowed; }
+    .btn-primary { background: var(--ember); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--ember-deep); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-soft);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--text-soft); color: var(--text); }
+    .btn-success { background: var(--olive); color: #fff; }
+    .btn-success:hover:not(:disabled) { background: var(--olive-deep); }
+
+    /* ================================================================
+       FORM TOOLBAR
+       ================================================================ */
+    .form-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .btn-tool {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      background: var(--tool-bg);
+      color: var(--tool-color);
+      border: 1px solid var(--tool-bdr);
+      border-radius: 2px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter .14s;
+    }
+    .btn-tool:hover { filter: brightness(1.06); }
+    .toolbar-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+    .color-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .color-group label { font-size: 12px; color: var(--text-soft); white-space: nowrap; }
+    input[type="color"] {
+      width: 30px; height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 1px 2px;
+      cursor: pointer;
+      background: var(--surface);
+    }
+
+    /* ================================================================
+       LABEL CARDS (FORM)
+       ================================================================ */
+    .labels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+      max-height: 54vh;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .label-item {
+      background: var(--field-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 13px;
+    }
+    .label-item-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-soft);
+      margin-bottom: 10px;
+    }
+    .field {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      margin-bottom: 8px;
+      transition: border-color .14s;
+    }
+    .field:focus { border-color: var(--ember); }
+    .field::placeholder { color: #B0A88E; }
+    .field-file {
+      width: 100%;
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .color-row label { font-size: 11px; color: var(--text-soft); flex: 1; }
+    .color-row input[type="color"] { width: 28px; height: 23px; }
+
+    /* ================================================================
+       DRAFT BANNER
+       ================================================================ */
+    .draft-banner {
+      background: rgba(181,120,42,0.07);
+      border: 1px solid rgba(181,120,42,0.35);
+      border-radius: 2px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .draft-actions { display: flex; gap: 16px; flex-shrink: 0; }
+    .draft-actions button {
+      background: none; border: none;
+      font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+      cursor: pointer; padding: 0;
+    }
+    .btn-restore { color: var(--ember); }
+    .btn-discard { color: var(--text-soft); }
+
+    /* ================================================================
+       PREVIEW A4
+       ================================================================ */
+    #preview-a4-container {
+      overflow-x: auto;
+      padding: 24px 0;
+      text-align: center;
+    }
+    #preview-a4 {
+      width: 210mm;
+      height: 297mm;
+      background: white;
+      overflow: hidden;
+      display: inline-block;
+      box-shadow: 0 6px 36px rgba(0,0,0,0.20);
+    }
+    .preview-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 10px;
+    }
+
+    /* ================================================================
+       MISC
+       ================================================================ */
+    .loading-msg {
+      text-align: center;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ember);
+    }
+    .error-msg {
+      color: #c0392b;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 18px;
+    }
+    .hidden { display: none !important; }
+
+    @media (max-width: 600px) {
+      .site-header { padding: 0 18px; }
+      .page-wrap { padding: 28px 14px 60px; }
+      .card { padding: 18px; }
+      .model-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-toolbar { gap: 8px; }
+      .step-label { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="site-logo">
+    <div class="logo-icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+        <line x1="7" y1="7" x2="7.01" y2="7"/>
+      </svg>
+    </div>
+    Gerador de Etiquetas
+  </div>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema">Tema</button>
+</header>
+
+<div class="page-wrap">
+
+  <!-- TELA 1 — SELEÇÃO -->
+  <div id="screen-selection">
+    <div class="page-header">
+      <h1 class="page-title">Gerador de Etiquetas</h1>
+      <p class="page-subtitle">Escolha o modelo, configure as opções e preencha os dados.</p>
+    </div>
+
+    <div class="stepper">
+      <div class="step active">
+        <div class="step-dot">1</div>
+        <span class="step-label">Modelo</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-dot">2</div>
+        <span class="step-label">Dados</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-dot">3</div>
+        <span class="step-label">Preview</span>
+      </div>
+    </div>
+
+    <div id="draft-banner" class="draft-banner hidden">
+      <span>Encontramos um rascunho salvo. Deseja restaurar?</span>
+      <div class="draft-actions">
+        <button id="restore-btn" class="btn-restore">Restaurar</button>
+        <button id="discard-btn" class="btn-discard">Ignorar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">1 — Modelo de etiqueta</div>
+      <div id="model-options" class="model-grid">
+
+        <button data-model="1" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="23" height="17" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="28" y="1" width="23" height="17" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="1" y="22" width="23" height="17" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="28" y="22" width="23" height="17" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+          </svg>
+          <span class="model-btn-name">Modelo 1</span>
+          <span class="model-btn-info">4 etiquetas · A4</span>
+        </button>
+
+        <button data-model="2" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="50" height="38" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <text x="26" y="24" font-size="13" font-weight="700" fill="#CEC5AE" text-anchor="middle" font-family="Arial">R$</text>
+          </svg>
+          <span class="model-btn-name">Modelo 2</span>
+          <span class="model-btn-info">1 etiqueta · A4</span>
+        </button>
+
+        <button data-model="3" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="19" y="1" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="37" y="1" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="1" y="15" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="19" y="15" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="37" y="15" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="1" y="29" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="19" y="29" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <rect x="37" y="29" width="15" height="11" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+          </svg>
+          <span class="model-btn-name">Modelo 3</span>
+          <span class="model-btn-info">9 etiquetas · A4</span>
+        </button>
+
+        <button data-model="4" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="1" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="1" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="1" y="7" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="7" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="7" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="1" y="13" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="13" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="13" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="1" y="19" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="19" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="19" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="1" y="25" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="25" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="25" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="1" y="31" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="19" y="31" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+            <rect x="37" y="31" width="15" height="4" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width=".8"/>
+          </svg>
+          <span class="model-btn-name">Modelo 4</span>
+          <span class="model-btn-info">24 etiquetas · A4</span>
+        </button>
+
+        <button data-model="5" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <text x="12" y="7" font-size="5" font-weight="900" fill="#8899C4" text-anchor="middle" font-family="Arial">01</text>
+            <rect x="28" y="1" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <text x="39" y="7" font-size="5" font-weight="900" fill="#8899C4" text-anchor="middle" font-family="Arial">02</text>
+            <rect x="1" y="10" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="28" y="10" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="1" y="19" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="28" y="19" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="1" y="28" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="28" y="28" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
+            <rect x="1" y="37" width="23" height="3" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width=".8"/>
+            <rect x="28" y="37" width="23" height="3" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width=".8"/>
+          </svg>
+          <span class="model-btn-name">Cartão Func.</span>
+          <span class="model-btn-info">10 cartões · A4</span>
+        </button>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">2 — Inserir logo?</div>
+      <div id="logo-options" class="toggle-group">
+        <button data-logo="true" class="toggle-btn">Sim</button>
+        <button data-logo="false" class="toggle-btn">Não</button>
+      </div>
+      <p id="logo-note" class="toggle-note hidden">Cartão Funcionário não suporta logo.</p>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-to-form" class="btn btn-primary" disabled>
+        Avançar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p id="select-error" class="error-msg"></p>
+  </div>
+
+  <!-- TELA 2 — FORMULÁRIO -->
+  <div id="screen-form" class="hidden">
+    <div class="page-header">
+      <h1 class="page-title">Preencha os dados</h1>
+      <p class="page-subtitle" id="form-subtitle">Complete os campos de cada etiqueta.</p>
+    </div>
+
+    <div class="stepper">
+      <div class="step done">
+        <div class="step-dot">✓</div>
+        <span class="step-label">Modelo</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step active">
+        <div class="step-dot">2</div>
+        <span class="step-label">Dados</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-dot">3</div>
+        <span class="step-label">Preview</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-toolbar">
+        <button id="replicate-btn" class="btn-tool">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="14" height="14" rx="2"/><path d="M4 8H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Replicar etiqueta 1 em todas
+        </button>
+        <div class="toolbar-sep"></div>
+        <div class="color-group">
+          <label for="global-bg">Fundo</label>
+          <input type="color" id="global-bg" value="#FFFFFF">
+          <label for="global-text">Texto</label>
+          <input type="color" id="global-text" value="#252118">
+          <button id="apply-colors-btn" class="btn-tool">Aplicar em todas</button>
+        </div>
+      </div>
+      <div id="form-fields" class="labels-grid"></div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-back-to-sel" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Voltar
+      </button>
+      <button id="btn-to-preview" class="btn btn-primary">
+        Gerar preview
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TELA 3 — PREVIEW -->
+  <div id="screen-preview" class="hidden">
+    <div class="page-header">
+      <h1 class="page-title">Preview</h1>
+      <p class="page-subtitle">Confira o layout e clique em Imprimir quando estiver correto.</p>
+    </div>
+
+    <div class="stepper">
+      <div class="step done">
+        <div class="step-dot">✓</div>
+        <span class="step-label">Modelo</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step done">
+        <div class="step-dot">✓</div>
+        <span class="step-label">Dados</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step active">
+        <div class="step-dot">3</div>
+        <span class="step-label">Preview</span>
+      </div>
+    </div>
+
+    <div id="preview-a4-container">
+      <div id="preview-a4"></div>
+    </div>
+    <p class="preview-hint">Folha no formato A4 — role horizontalmente para ver completa em telas menores.</p>
+
+    <div class="btn-row">
+      <button id="btn-back-to-form" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Editar
+      </button>
+      <button id="btn-print" class="btn btn-success">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir / PDF
+      </button>
+      <button id="btn-new" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/></svg>
+        Nova etiqueta
+      </button>
+    </div>
+    <div id="loading" class="loading-msg hidden">Gerando PDF… aguarde.</div>
+  </div>
+
+</div>
+
+<script>
+/* ==================================================================
+   MODELOS
+   ================================================================== */
+const MODELS = {
+  '1': {
+    count: 4, cols: 2, rows: 2, type: 'product',
+    gap: '2mm', padding: '4mm',
+    descStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:30px;margin:0;line-height:1.15;',
+    priceStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:88px;margin:0;line-height:1;'
+  },
+  '2': {
+    count: 1, cols: 1, rows: 1, type: 'product',
+    gap: '0', padding: '8mm',
+    descStyle: 'font-family:"Arial Rounded MT Bold",Arial,sans-serif;font-weight:700;font-size:46px;margin:0;line-height:1.15;',
+    priceStyle: 'font-family:"Arial Rounded MT Bold",Arial,sans-serif;font-weight:700;font-size:100px;margin:0;line-height:1;'
+  },
+  '3': {
+    count: 9, cols: 3, rows: 3, type: 'product',
+    gap: '2mm', padding: '4mm',
+    descStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:24px;margin:0;line-height:1.15;',
+    priceStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:60px;margin:0;line-height:1;'
+  },
+  '4': {
+    count: 24, cols: 3, rows: 8, type: 'product',
+    gap: '1mm', padding: '3mm',
+    descStyle: 'font-family:"Arial Rounded MT Bold",Arial,sans-serif;font-weight:700;font-size:13px;margin:0;line-height:1.2;',
+    priceStyle: 'font-family:"Arial Rounded MT Bold",Arial,sans-serif;font-weight:700;font-size:32px;margin:0;line-height:1;'
+  },
+  '5': {
+    count: 10, cols: 2, rows: 5, type: 'employee',
+    gap: '4mm', padding: '8mm'
+  }
+};
+
+const DRAFT_KEY = 'ge_draft_v1';
+
+/* ==================================================================
+   ESTADO
+   ================================================================== */
+const state = {
+  model: null, useLogo: null,
+  labelsData: [],
+  globalBg: '#FFFFFF', globalText: '#252118',
+};
+
+/* ==================================================================
+   UTILS
+   ================================================================== */
+const $  = id  => document.getElementById(id);
+const qa = sel => document.querySelectorAll(sel);
+
+function showScreen(name) {
+  ['selection', 'form', 'preview'].forEach(s => $(`screen-${s}`).classList.add('hidden'));
+  $(`screen-${name}`).classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ==================================================================
+   TEMA
+   ================================================================== */
+(function initTheme() {
+  const stored = localStorage.getItem('ge_theme');
+  if (stored) document.documentElement.setAttribute('data-theme', stored);
+})();
+
+$('theme-toggle').addEventListener('click', () => {
+  const cur  = document.documentElement.getAttribute('data-theme');
+  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const next = (cur === 'dark' || (!cur && dark)) ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('ge_theme', next);
+});
+
+/* ==================================================================
+   TELA 1 — SELEÇÃO
+   ================================================================== */
+function updateAdvBtn() {
+  $('btn-to-form').disabled = !(state.model && state.useLogo !== null);
+}
+
+$('model-options').addEventListener('click', e => {
+  const btn = e.target.closest('.model-btn');
+  if (!btn) return;
+  state.model = btn.dataset.model;
+  qa('.model-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (state.model === '5') {
+    state.useLogo = false;
+    qa('.toggle-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelector('.toggle-btn[data-logo="false"]')?.classList.add('selected');
+    $('logo-note').classList.remove('hidden');
+  } else {
+    $('logo-note').classList.add('hidden');
+  }
+  updateAdvBtn();
+});
+
+$('logo-options').addEventListener('click', e => {
+  if (state.model === '5') return;
+  const btn = e.target.closest('.toggle-btn');
+  if (!btn) return;
+  state.useLogo = btn.dataset.logo === 'true';
+  qa('.toggle-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  updateAdvBtn();
+});
+
+$('btn-to-form').addEventListener('click', () => {
+  $('select-error').textContent = '';
+  buildForm();
+  showScreen('form');
+});
+
+/* ==================================================================
+   RASCUNHO
+   ================================================================== */
+function checkDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    if (JSON.parse(raw)?.model) $('draft-banner').classList.remove('hidden');
+  } catch {}
+}
+
+function restoreDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!d?.model) return;
+    state.model      = d.model;
+    state.useLogo    = d.useLogo;
+    state.labelsData = d.labelsData || [];
+    state.globalBg   = d.globalBg   || '#FFFFFF';
+    state.globalText = d.globalText  || '#252118';
+    qa('.model-btn').forEach(b => b.classList.toggle('selected', b.dataset.model === state.model));
+    qa('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.logo === String(state.useLogo)));
+    if (state.model === '5') $('logo-note').classList.remove('hidden');
+    updateAdvBtn();
+    $('draft-banner').classList.add('hidden');
+    buildForm();
+    showScreen('form');
+  } catch {}
+}
+
+function saveDraft() {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      model: state.model, useLogo: state.useLogo,
+      globalBg: state.globalBg, globalText: state.globalText,
+      labelsData: state.labelsData.map(d => ({
+        desc: d.desc, price: d.price,
+        number: d.number, name: d.name,
+        bg: d.bg, textColor: d.textColor
+      }))
+    }));
+  } catch {}
+}
+
+$('restore-btn').addEventListener('click', restoreDraft);
+$('discard-btn').addEventListener('click', () => {
+  localStorage.removeItem(DRAFT_KEY);
+  $('draft-banner').classList.add('hidden');
+});
+
+/* ==================================================================
+   TELA 2 — FORMULÁRIO
+   ================================================================== */
+function buildForm() {
+  const cfg = MODELS[state.model];
+  const container = $('form-fields');
+  container.innerHTML = '';
+  $('form-subtitle').textContent = cfg.type === 'employee'
+    ? 'Preencha o número e o nome de cada funcionário.'
+    : 'Complete a descrição e o preço de cada etiqueta.';
+  $('global-bg').value   = state.globalBg;
+  $('global-text').value = state.globalText;
+
+  for (let i = 0; i < cfg.count; i++) {
+    const saved = state.labelsData[i] || {};
+    const bg = saved.bg || state.globalBg;
+    const tc = saved.textColor || state.globalText;
+    const div = document.createElement('div');
+    div.className = 'label-item';
+
+    if (cfg.type === 'employee') {
+      div.innerHTML = `
+        <div class="label-item-title">Funcionário ${i + 1}</div>
+        <input class="field" type="text" data-i="${i}" data-f="number"
+          placeholder="Número (ex: 001)" value="${esc(saved.number || '')}">
+        <input class="field" type="text" data-i="${i}" data-f="name"
+          placeholder="Nome completo" value="${esc(saved.name || '')}" style="margin-bottom:4px;">
+        <div class="color-row">
+          <label>Fundo</label><input type="color" data-i="${i}" data-f="bg" value="${bg}">
+          <label>Texto</label><input type="color" data-i="${i}" data-f="textColor" value="${tc}">
+        </div>`;
+    } else {
+      div.innerHTML = `
+        <div class="label-item-title">Etiqueta ${i + 1}</div>
+        <input class="field" type="text" data-i="${i}" data-f="desc"
+          placeholder="Descrição do produto" value="${esc(saved.desc || '')}">
+        <input class="field" type="text" data-i="${i}" data-f="price"
+          placeholder="Preço (ex: R$ 9,99)" value="${esc(saved.price || '')}" style="margin-bottom:4px;">
+        ${state.useLogo
+          ? `<input class="field-file" type="file" data-i="${i}" data-f="logo" accept="image/*">`
+          : ''}
+        <div class="color-row">
+          <label>Fundo</label><input type="color" data-i="${i}" data-f="bg" value="${bg}">
+          <label>Texto</label><input type="color" data-i="${i}" data-f="textColor" value="${tc}">
+        </div>`;
+    }
+    container.appendChild(div);
+  }
+}
+
+$('replicate-btn').addEventListener('click', () => {
+  const cfg = MODELS[state.model];
+  const c = $('form-fields');
+  if (cfg.type === 'employee') {
+    const num0  = c.querySelector('[data-i="0"][data-f="number"]')?.value || '';
+    const name0 = c.querySelector('[data-i="0"][data-f="name"]')?.value   || '';
+    for (let i = 1; i < cfg.count; i++) {
+      const n = c.querySelector(`[data-i="${i}"][data-f="number"]`);
+      const m = c.querySelector(`[data-i="${i}"][data-f="name"]`);
+      if (n) n.value = num0;
+      if (m) m.value = name0;
+    }
+  } else {
+    const d0 = c.querySelector('[data-i="0"][data-f="desc"]')?.value  || '';
+    const p0 = c.querySelector('[data-i="0"][data-f="price"]')?.value || '';
+    for (let i = 1; i < cfg.count; i++) {
+      const d = c.querySelector(`[data-i="${i}"][data-f="desc"]`);
+      const p = c.querySelector(`[data-i="${i}"][data-f="price"]`);
+      if (d) d.value = d0;
+      if (p) p.value = p0;
+    }
+  }
+});
+
+$('apply-colors-btn').addEventListener('click', () => {
+  const bg = $('global-bg').value;
+  const tc = $('global-text').value;
+  state.globalBg = bg; state.globalText = tc;
+  const cfg = MODELS[state.model];
+  const c = $('form-fields');
+  for (let i = 0; i < cfg.count; i++) {
+    const bgEl = c.querySelector(`[data-i="${i}"][data-f="bg"]`);
+    const tcEl = c.querySelector(`[data-i="${i}"][data-f="textColor"]`);
+    if (bgEl) bgEl.value = bg;
+    if (tcEl) tcEl.value = tc;
+  }
+});
+
+function collectForm() {
+  const cfg = MODELS[state.model];
+  state.labelsData = [];
+  const c = $('form-fields');
+  for (let i = 0; i < cfg.count; i++) {
+    const bg = c.querySelector(`[data-i="${i}"][data-f="bg"]`)?.value        || '#FFFFFF';
+    const tc = c.querySelector(`[data-i="${i}"][data-f="textColor"]`)?.value || '#252118';
+    if (cfg.type === 'employee') {
+      state.labelsData.push({
+        number: c.querySelector(`[data-i="${i}"][data-f="number"]`)?.value || '',
+        name:   c.querySelector(`[data-i="${i}"][data-f="name"]`)?.value   || '',
+        bg, textColor: tc
+      });
+    } else {
+      const logoInput = c.querySelector(`[data-i="${i}"][data-f="logo"]`);
+      state.labelsData.push({
+        desc:     c.querySelector(`[data-i="${i}"][data-f="desc"]`)?.value  || '',
+        price:    c.querySelector(`[data-i="${i}"][data-f="price"]`)?.value || '',
+        logoFile: logoInput?.files?.[0] || null,
+        bg, textColor: tc
+      });
+    }
+  }
+}
+
+$('btn-to-preview').addEventListener('click', async () => {
+  collectForm();
+  saveDraft();
+  await renderPreview();
+  showScreen('preview');
+});
+
+$('btn-back-to-sel').addEventListener('click', () => showScreen('selection'));
+$('btn-back-to-form').addEventListener('click', () => showScreen('form'));
+
+/* ==================================================================
+   TELA 3 — PREVIEW
+   ================================================================== */
+async function renderPreview() {
+  const cfg = MODELS[state.model];
+  const el = $('preview-a4');
+  el.style.cssText = `
+    width:210mm; height:297mm; background:white; overflow:hidden;
+    display:grid;
+    grid-template-columns:repeat(${cfg.cols},1fr);
+    grid-template-rows:repeat(${cfg.rows},1fr);
+    gap:${cfg.gap}; padding:${cfg.padding}; box-sizing:border-box;
+  `;
+  el.innerHTML = '';
+
+  const resolved = await Promise.all(state.labelsData.map(data =>
+    new Promise(resolve => {
+      if (data.logoFile) {
+        const r = new FileReader();
+        r.onload = e => resolve({ ...data, logoUrl: e.target.result });
+        r.readAsDataURL(data.logoFile);
+      } else { resolve(data); }
+    })
+  ));
+
+  for (const data of resolved) {
+    const bg = data.bg || '#FFFFFF';
+    const tc = data.textColor || '#252118';
+    const cell = document.createElement('div');
+
+    if (cfg.type === 'employee') {
+      const empty = !data.number && !data.name;
+      cell.style.cssText = empty
+        ? 'border:1px dashed #D4CDB8;border-radius:2px;'
+        : `background:${bg};border:1px solid #C8C0AA;border-radius:2px;
+           display:flex;flex-direction:column;align-items:center;
+           justify-content:center;text-align:center;padding:5mm;overflow:hidden;`;
+      if (!empty) {
+        cell.innerHTML = `
+          <div style="font-family:'Arial Black',Arial,sans-serif;font-weight:900;
+            font-size:52px;line-height:1;color:${tc};letter-spacing:-.01em;">${esc(data.number)}</div>
+          <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:600;
+            color:${tc};margin-top:7px;letter-spacing:.12em;text-transform:uppercase;
+            opacity:.75;">${esc(data.name)}</div>`;
+      }
+    } else {
+      const empty = !data.desc && !data.price && !data.logoUrl;
+      cell.style.cssText = empty
+        ? 'border:1px dashed #D4CDB8;border-radius:2px;'
+        : `background:${bg};border:1px solid #B8B0A0;
+           display:flex;flex-direction:column;align-items:center;
+           justify-content:center;text-align:center;padding:2px;overflow:hidden;`;
+      if (!empty) {
+        cell.innerHTML = `
+          ${data.logoUrl
+            ? `<img src="${data.logoUrl}" style="max-height:28%;max-width:88%;object-fit:contain;margin-bottom:2px;">`
+            : ''}
+          <div style="display:flex;flex-direction:column;align-items:center;
+            justify-content:center;flex:1;gap:0;padding:2px;">
+            <p style="${cfg.descStyle}color:${tc};">${esc(data.desc)}</p>
+            <p style="${cfg.priceStyle}color:${tc};">${esc(data.price)}</p>
+          </div>`;
+      }
+    }
+    el.appendChild(cell);
+  }
+}
+
+/* ==================================================================
+   IMPRESSÃO / PDF
+   ================================================================== */
+$('btn-print').addEventListener('click', async () => {
+  $('loading').classList.remove('hidden');
+  $('btn-print').disabled = true;
+  $('btn-back-to-form').disabled = true;
+  try {
+    const canvas = await html2canvas($('preview-a4'), { scale: 3, useCORS: true, logging: false });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0,
+      pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+    pdf.save('etiquetas.pdf');
+  } catch (err) {
+    alert('Erro ao gerar PDF: ' + err.message);
+  }
+  $('loading').classList.add('hidden');
+  $('btn-print').disabled = false;
+  $('btn-back-to-form').disabled = false;
+});
+
+/* ==================================================================
+   NOVA ETIQUETA
+   ================================================================== */
+$('btn-new').addEventListener('click', () => {
+  state.model = null; state.useLogo = null;
+  state.labelsData = [];
+  state.globalBg = '#FFFFFF'; state.globalText = '#252118';
+  qa('.model-btn, .toggle-btn').forEach(b => b.classList.remove('selected'));
+  $('form-fields').innerHTML = '';
+  $('preview-a4').innerHTML = '';
+  $('logo-note').classList.add('hidden');
+  $('select-error').textContent = '';
+  updateAdvBtn();
+  showScreen('selection');
+});
+
+/* ==================================================================
+   INIT
+   ================================================================== */
+checkDraft();
+</script>
+</body>
+</html>
