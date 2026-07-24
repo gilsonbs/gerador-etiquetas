@@ -624,6 +624,15 @@
 
         <button data-model="5" class="model-btn">
           <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
+            <rect x="7" y="1" width="38" height="38" rx="1" fill="#EEE9DE" stroke="#CEC5AE" stroke-width="1"/>
+            <text x="26" y="26" font-size="13" font-weight="700" fill="#CEC5AE" text-anchor="middle" font-family="Arial">R$</text>
+          </svg>
+          <span class="model-btn-name">Modelo 5</span>
+          <span class="model-btn-info">1 etiqueta · 21×21cm</span>
+        </button>
+
+        <button data-model="6" class="model-btn">
+          <svg class="model-btn-thumb" width="52" height="40" viewBox="0 0 52 40" fill="none" aria-hidden="true">
             <rect x="1" y="1" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
             <text x="12" y="7" font-size="5" font-weight="900" fill="#8899C4" text-anchor="middle" font-family="Arial">01</text>
             <rect x="28" y="1" width="23" height="7" rx="1" fill="#E4EAFB" stroke="#A0B0D4" stroke-width="1"/>
@@ -640,6 +649,7 @@
           <span class="model-btn-name">Cartão Func.</span>
           <span class="model-btn-info">10 cartões · A4</span>
         </button>
+
 
       </div>
     </div>
@@ -820,6 +830,12 @@ const MODELS = {
     priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:32px;margin:0;line-height:1;"
   },
   '5': {
+    count: 1, cols: 1, rows: 1, type: 'product',
+    gap: '0', padding: '0', rowHeight: '210mm', tagSize: '52px',
+    descStyle: "font-family:'Arial Rounded MT Bold',Arial,sans-serif;font-weight:700;font-size:52px;margin:0;line-height:1.15;",
+    priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:114px;margin:0;line-height:1;"
+  },
+  '6': {
     count: 10, cols: 2, rows: 5, type: 'employee',
     gap: '4mm', padding: '8mm'
   }
@@ -935,7 +951,7 @@ function restoreDraft() {
     state.borderStyle  = d.borderStyle  || 'none';
     qa('.model-btn').forEach(b => b.classList.toggle('selected', b.dataset.model === state.model));
     qa('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.logo === String(state.useLogo)));
-    if (state.model === '5') $('logo-note').classList.remove('hidden');
+    if (state.model === '6') $('logo-note').classList.remove('hidden');
     updateAdvBtn();
     $('draft-banner').classList.add('hidden');
     buildForm();
@@ -976,7 +992,7 @@ function buildForm() {
     : 'Complete a descrição e o preço de cada etiqueta.';
   $('global-bg').value   = state.globalBg;
   $('global-text').value = state.globalText;
-  const hasBorderSel = ['1','2','3'].includes(state.model);
+  const hasBorderSel = ['1','2','3','5'].includes(state.model);
   $('border-group').style.display = hasBorderSel ? '' : 'none';
   $('border-sep').style.display   = hasBorderSel ? '' : 'none';
   qa('.border-btn').forEach(b => b.classList.toggle('selected', b.dataset.border === state.borderStyle));
@@ -1146,7 +1162,7 @@ async function renderPreview() {
     width:210mm; height:297mm; background:white; overflow:hidden;
     display:grid;
     grid-template-columns:repeat(${cfg.cols},1fr);
-    grid-template-rows:repeat(${cfg.rows},1fr);
+    grid-template-rows:repeat(${cfg.rows},${cfg.rowHeight || '1fr'});
     gap:${cfg.gap}; padding:${cfg.padding}; box-sizing:border-box;
   `;
   el.innerHTML = '';
@@ -1173,7 +1189,7 @@ async function renderPreview() {
       }
     } else {
       const empty = !data.desc && !data.price && !state.useLogo;
-      const borderCss = ['1','2','3'].includes(state.model)
+      const borderCss = ['1','2','3','5'].includes(state.model)
         ? getBorderCss(state.borderStyle, tc)
         : 'border:1px solid #B8B0A0;';
       cell.style.cssText = empty
