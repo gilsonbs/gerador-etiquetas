@@ -455,6 +455,17 @@
       margin-top: 10px;
       min-height: 18px;
     }
+    .emoji-row { margin-bottom: 4px; }
+    .field-emoji { font-size: 16px; margin-bottom: 4px; }
+    .emoji-presets {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 2px;
+    }
+    .emoji-preset {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 5px; font-size: 18px;
+      cursor: pointer; line-height: 1; transition: background .12s;
+    }
+    .emoji-preset:hover { background: var(--border); }
     .site-footer {
       text-align: center;
       padding: 20px 16px 28px;
@@ -748,25 +759,25 @@
 const MODELS = {
   '1': {
     count: 4, cols: 2, rows: 2, type: 'product',
-    gap: '2mm', padding: '4mm',
+    gap: '2mm', padding: '4mm', tagSize: '34px',
     descStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:30px;margin:0;line-height:1.15;',
     priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:88px;margin:0;line-height:1;"
   },
   '2': {
     count: 1, cols: 1, rows: 1, type: 'product',
-    gap: '0', padding: '8mm',
+    gap: '0', padding: '8mm', tagSize: '48px',
     descStyle: "font-family:'Arial Rounded MT Bold',Arial,sans-serif;font-weight:700;font-size:46px;margin:0;line-height:1.15;",
     priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:100px;margin:0;line-height:1;"
   },
   '3': {
     count: 9, cols: 3, rows: 3, type: 'product',
-    gap: '2mm', padding: '4mm',
+    gap: '2mm', padding: '4mm', tagSize: '26px',
     descStyle: 'font-family:Calibri,Arial,sans-serif;font-weight:700;font-size:24px;margin:0;line-height:1.15;',
     priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:60px;margin:0;line-height:1;"
   },
   '4': {
     count: 24, cols: 3, rows: 8, type: 'product',
-    gap: '1mm', padding: '3mm',
+    gap: '1mm', padding: '3mm', tagSize: '12px',
     descStyle: "font-family:'Arial Rounded MT Bold',Arial,sans-serif;font-weight:700;font-size:13px;margin:0;line-height:1.2;",
     priceStyle: "font-family:'Arial Black',Arial,sans-serif;font-weight:700;font-size:32px;margin:0;line-height:1;"
   },
@@ -898,7 +909,7 @@ function saveDraft() {
       model: state.model, useLogo: state.useLogo,
       globalBg: state.globalBg, globalText: state.globalText,
       labelsData: state.labelsData.map(d => ({
-        desc: d.desc, price: d.price,
+        desc: d.desc, price: d.price, emoji: d.emoji,
         number: d.number, name: d.name,
         bg: d.bg, textColor: d.textColor
       }))
@@ -949,8 +960,17 @@ function buildForm() {
         <input class="field" type="text" data-i="${i}" data-f="desc"
           placeholder="Descrição do produto" value="${esc(saved.desc || '')}">
         <input class="field" type="text" data-i="${i}" data-f="price"
-          placeholder="Preço (ex: R$ 9,99)" value="${esc(saved.price || '')}" style="margin-bottom:4px;">
-        <div class="color-row">
+          placeholder="Preço (ex: R$ 9,99)" value="${esc(saved.price || '')}">
+        <div class="emoji-row">
+          <input class="field field-emoji" type="text" data-i="${i}" data-f="emoji"
+            placeholder="Emoji / ícone (opcional)" value="${esc(saved.emoji || '')}">
+          <div class="emoji-presets">
+            ${['🔥','⭐','💊','🩺','🎁','✨','🏷️','💰','⬇️','🆕','🅾️','❤️'].map(
+              e => `<button type="button" class="emoji-preset" data-i="${i}">${e}</button>`
+            ).join('')}
+          </div>
+        </div>
+        <div class="color-row" style="margin-top:4px;">
           <label>Fundo</label><input type="color" data-i="${i}" data-f="bg" value="${bg}">
           <label>Texto</label><input type="color" data-i="${i}" data-f="textColor" value="${tc}">
         </div>`;
@@ -958,6 +978,14 @@ function buildForm() {
     container.appendChild(div);
   }
 }
+
+$('form-fields').addEventListener('click', e => {
+  const preset = e.target.closest('.emoji-preset');
+  if (!preset) return;
+  const i = preset.dataset.i;
+  const inp = $('form-fields').querySelector(`[data-i="${i}"][data-f="emoji"]`);
+  if (inp) { inp.value = preset.textContent; inp.focus(); }
+});
 
 $('replicate-btn').addEventListener('click', () => {
   const cfg = MODELS[state.model];
@@ -974,11 +1002,14 @@ $('replicate-btn').addEventListener('click', () => {
   } else {
     const d0 = c.querySelector('[data-i="0"][data-f="desc"]')?.value  || '';
     const p0 = c.querySelector('[data-i="0"][data-f="price"]')?.value || '';
+    const e0 = c.querySelector('[data-i="0"][data-f="emoji"]')?.value || '';
     for (let i = 1; i < cfg.count; i++) {
       const d = c.querySelector(`[data-i="${i}"][data-f="desc"]`);
       const p = c.querySelector(`[data-i="${i}"][data-f="price"]`);
+      const e = c.querySelector(`[data-i="${i}"][data-f="emoji"]`);
       if (d) d.value = d0;
       if (p) p.value = p0;
+      if (e) e.value = e0;
     }
   }
 });
@@ -1014,6 +1045,7 @@ function collectForm() {
       state.labelsData.push({
         desc:  c.querySelector(`[data-i="${i}"][data-f="desc"]`)?.value  || '',
         price: c.querySelector(`[data-i="${i}"][data-f="price"]`)?.value || '',
+        emoji: c.querySelector(`[data-i="${i}"][data-f="emoji"]`)?.value || '',
         bg, textColor: tc
       });
     }
@@ -1092,6 +1124,7 @@ async function renderPreview() {
             justify-content:center;flex:1;gap:0;padding:2px;">
             <p style="${cfg.descStyle}color:${tc};">${esc(data.desc)}</p>
             ${priceTag(data.price, cfg.priceStyle, tc)}
+            ${data.emoji ? `<div style="font-size:${cfg.tagSize};line-height:1.1;margin-top:2px;">${esc(data.emoji)}</div>` : ''}
           </div>`;
       }
     }
