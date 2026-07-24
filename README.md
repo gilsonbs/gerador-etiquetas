@@ -1,6 +1,6 @@
-# Gerador de Etiquetas — Monte das Oliveiras
+# Gerador de Etiquetas 
 
-Ferramenta web para criar e imprimir etiquetas de preço e crachás de funcionários para as **Drogarias Max**.
+Ferramenta web para criar e imprimir etiquetas de preço e cartão de funcionários para as **Drogarias Max**.
 
 Acesse online: **https://gilsonbs.github.io/gerador-etiquetas/**
 
@@ -14,7 +14,7 @@ Acesse online: **https://gilsonbs.github.io/gerador-etiquetas/**
 | 2 | 1 (folha inteira) | Destaque / promoção |
 | 3 | 9 (3×3) | Etiqueta de produto média |
 | 4 | 24 (3×8) | Etiqueta de produto pequena |
-| 5 | 10 (2×5) | Crachá de funcionário |
+| 5 | 10 (2×5) | Cartão de funcionário |
 
 ## Funcionalidades
 
