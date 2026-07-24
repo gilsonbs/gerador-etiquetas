@@ -407,6 +407,21 @@
     .bp-dashed { border:2px dashed var(--text); }
     .bp-thick  { border:4px solid var(--text); }
 
+    .font-group { display:flex; align-items:center; gap:6px; }
+    .font-group > label { font-size:11px; color:var(--text-soft); white-space:nowrap; }
+    .font-btns { display:flex; gap:3px; }
+    .font-btn {
+      background:var(--card-bg); border:1px solid var(--border); border-radius:5px;
+      padding:3px 8px; cursor:pointer; display:flex; align-items:center; gap:4px;
+      font-size:11px; color:var(--text-soft); transition:background .12s, border-color .12s;
+    }
+    .font-btn:hover { background:var(--border); }
+    .font-btn.selected { border-color:var(--ember); color:var(--ember); }
+    .font-btn .fa { font-family:Arial,sans-serif; font-weight:700; line-height:1; }
+    .font-btn .fa-s { font-size:12px; }
+    .font-btn .fa-m { font-size:15px; }
+    .font-btn .fa-l { font-size:18px; }
+
     /* ================================================================
        DRAFT BANNER
        ================================================================ */
@@ -711,6 +726,21 @@
           <button id="apply-colors-btn" class="btn-tool">Aplicar em todas</button>
         </div>
         <div class="toolbar-sep" id="border-sep" style="display:none;"></div>
+        <div class="toolbar-sep" id="font-sep" style="display:none;"></div>
+        <div class="font-group" id="font-group" style="display:none;">
+          <label>Fonte</label>
+          <div class="font-btns">
+            <button class="font-btn selected" data-scale="1" title="Normal">
+              <span class="fa fa-s">A</span>Normal
+            </button>
+            <button class="font-btn" data-scale="1.2" title="Grande">
+              <span class="fa fa-m">A</span>Grande
+            </button>
+            <button class="font-btn" data-scale="1.4" title="Extra">
+              <span class="fa fa-l">A</span>Extra
+            </button>
+          </div>
+        </div>
         <div class="border-group" id="border-group" style="display:none;">
           <label>Borda</label>
           <div class="border-btns">
@@ -852,6 +882,7 @@ const state = {
   labelsData: [],
   globalBg: '#FFFFFF', globalText: '#252118',
   borderStyle: 'none',
+  fontScale: 1,
 };
 
 /* ==================================================================
@@ -949,6 +980,7 @@ function restoreDraft() {
     state.globalBg     = d.globalBg     || '#FFFFFF';
     state.globalText   = d.globalText   || '#252118';
     state.borderStyle  = d.borderStyle  || 'none';
+    state.fontScale    = d.fontScale    || 1;
     qa('.model-btn').forEach(b => b.classList.toggle('selected', b.dataset.model === state.model));
     qa('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.logo === String(state.useLogo)));
     if (state.model === '6') $('logo-note').classList.remove('hidden');
@@ -964,7 +996,7 @@ function saveDraft() {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({
       model: state.model, useLogo: state.useLogo,
       globalBg: state.globalBg, globalText: state.globalText,
-      borderStyle: state.borderStyle,
+      borderStyle: state.borderStyle, fontScale: state.fontScale,
       labelsData: state.labelsData.map(d => ({
         desc: d.desc, price: d.price, emoji: d.emoji,
         number: d.number, name: d.name,
@@ -992,6 +1024,11 @@ function buildForm() {
     : 'Complete a descrição e o preço de cada etiqueta.';
   $('global-bg').value   = state.globalBg;
   $('global-text').value = state.globalText;
+  const hasFontSel   = ['1','2','3','5'].includes(state.model);
+  $('font-group').style.display  = hasFontSel ? '' : 'none';
+  $('font-sep').style.display    = hasFontSel ? '' : 'none';
+  qa('.font-btn').forEach(b => b.classList.toggle('selected', parseFloat(b.dataset.scale) === state.fontScale));
+
   const hasBorderSel = ['1','2','3','5'].includes(state.model);
   $('border-group').style.display = hasBorderSel ? '' : 'none';
   $('border-sep').style.display   = hasBorderSel ? '' : 'none';
@@ -1075,6 +1112,14 @@ $('replicate-btn').addEventListener('click', () => {
   }
 });
 
+qa('.font-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.fontScale = parseFloat(btn.dataset.scale);
+    qa('.font-btn').forEach(b => b.classList.toggle('selected', b === btn));
+    saveDraft();
+  });
+});
+
 qa('.border-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     state.borderStyle = btn.dataset.border;
@@ -1134,6 +1179,11 @@ $('btn-back-to-form').addEventListener('click', () => showScreen('form'));
 /* ==================================================================
    TELA 3 — PREVIEW
    ================================================================== */
+function scaleFontSize(styleStr, scale) {
+  if (scale === 1) return styleStr;
+  return styleStr.replace(/font-size:([\d.]+)px/g, (_, n) => `font-size:${Math.round(parseFloat(n) * scale)}px`);
+}
+
 function getBorderCss(style, color) {
   switch (style) {
     case 'thin':   return `border:1.5px solid ${color};`;
@@ -1204,8 +1254,8 @@ async function renderPreview() {
             : ''}
           <div style="display:flex;flex-direction:column;align-items:center;
             justify-content:center;flex:1;gap:0;padding:2px;">
-            <p style="${cfg.descStyle}color:${tc};">${esc(data.desc)}</p>
-            ${priceTag(data.price, cfg.priceStyle, tc)}
+            <p style="${scaleFontSize(cfg.descStyle, state.fontScale)}color:${tc};">${esc(data.desc)}</p>
+            ${priceTag(data.price, scaleFontSize(cfg.priceStyle, state.fontScale), tc)}
             ${data.emoji ? `<div style="font-size:${cfg.tagSize};line-height:1.1;margin-top:2px;">${esc(data.emoji)}</div>` : ''}
           </div>`;
       }
@@ -1244,7 +1294,9 @@ $('btn-new').addEventListener('click', () => {
   state.labelsData = [];
   state.globalBg = '#FFFFFF'; state.globalText = '#252118';
   state.borderStyle = 'none';
+  state.fontScale   = 1;
   qa('.border-btn').forEach(b => b.classList.toggle('selected', b.dataset.border === 'none'));
+  qa('.font-btn').forEach(b => b.classList.toggle('selected', parseFloat(b.dataset.scale) === 1));
   qa('.model-btn, .toggle-btn').forEach(b => b.classList.remove('selected'));
   $('form-fields').innerHTML = '';
   $('preview-a4').innerHTML = '';
